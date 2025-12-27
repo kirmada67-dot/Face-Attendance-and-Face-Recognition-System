@@ -6,7 +6,7 @@ from PIL import Image, ImageTk
 class App:
     def __init__(self):
         self.main_window = tk.Tk()
-        self.main_window.geometry("1200x520+350+100")
+        self.main_window.geometry("1200x820+350+100")
 
         self.login_button_main_window = util.get_button(self.main_window, "Login", "green", self.login)
         self.login_button_main_window.place(x=750, y=300)
