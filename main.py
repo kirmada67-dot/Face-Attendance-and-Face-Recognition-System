@@ -14,20 +14,64 @@ from test import test
 class App:
     def __init__(self):
         self.main_window = tk.Tk()
-        self.main_window.geometry("1200x520+350+100")
+        util.setup_window(self.main_window, title="Face Attendance System", size=(1200, 600))
 
-        self.login_button_main_window = util.get_button(self.main_window, 'login', 'green', self.login)
-        self.login_button_main_window.place(x=750, y=200)
+        self.page_bg = "#e8f1fb"
+        self.webcam_frame_bg = "#0c1116"
+        self.panel_bg = "#0b4da0"
+        self.panel_inner = "#ffffff"
+        self.btn_primary = "#2f8fe8"
+        self.btn_secondary = "#1976d2"
+        self.btn_grey = "#6b7280"
+        self.main_window.configure(bg=self.page_bg)
 
-        self.logout_button_main_window = util.get_button(self.main_window, 'logout', 'red', self.logout)
-        self.logout_button_main_window.place(x=750, y=300)
+        self.left_frame = tk.Frame(self.main_window, bg=self.page_bg)
+        self.left_frame.pack(side="left", fill="both", expand=True)
 
-        self.register_new_user_button_main_window = util.get_button(self.main_window, 'register new user', 'gray',
-                                                                    self.register_new_user, fg='black')
-        self.register_new_user_button_main_window.place(x=750, y=400)
+        self.webcam_margin = tk.Frame(self.left_frame, bg="#dff6ff")
+        self.webcam_margin.pack(expand=True, fill="both", padx=40, pady=30)
 
-        self.webcam_label = util.get_img_label(self.main_window)
-        self.webcam_label.place(x=10, y=0, width=700, height=500)
+        self.webcam_card = tk.Frame(self.webcam_margin, bg=self.webcam_frame_bg, bd=2, relief="flat")
+        self.webcam_card.pack(expand=True, fill="both", padx=10, pady=10)
+
+        self.right_frame = tk.Frame(self.main_window, bg=self.panel_bg, width=320)
+        self.right_frame.pack(side="right", fill="y")
+
+        title_strip = tk.Frame(self.right_frame, bg=self.panel_inner, height=80)
+        title_strip.pack(fill="x")
+        self.title_label = tk.Label(
+            title_strip,
+            text="Face Attendance",
+            font=("Segoe UI", 20, "bold"),
+            bg=self.panel_inner,
+            fg=self.panel_bg
+        )
+        self.title_label.pack(pady=18)
+
+        controls_frame = tk.Frame(self.right_frame, bg=self.panel_bg)
+        controls_frame.pack(expand=True, fill="both", pady=20)
+
+        self.login_button_main_window = util.get_button(
+            controls_frame, 'Login', self.btn_primary, self.login
+        )
+        self.login_button_main_window.pack(pady=(10, 12), ipadx=10, ipady=6)
+
+        self.logout_button_main_window = util.get_button(
+            controls_frame, 'Logout', self.btn_secondary, self.logout
+        )
+        self.logout_button_main_window.pack(pady=(0, 12), ipadx=10, ipady=6)
+
+        self.register_new_user_button_main_window = util.get_button(
+            controls_frame, 'Register New User', self.btn_grey,
+            self.register_new_user, fg='white'
+        )
+        self.register_new_user_button_main_window.pack(pady=(0, 12), ipadx=8, ipady=6)
+
+        footer = tk.Frame(self.right_frame, bg=self.panel_bg, height=40)
+        footer.pack(fill="x", side="bottom", pady=10)
+
+        self.webcam_label = tk.Label(self.webcam_card, bg=self.webcam_frame_bg)
+        self.webcam_label.pack(expand=True, fill="both", padx=12, pady=12)
 
         self.add_webcam(self.webcam_label)
 
@@ -40,6 +84,11 @@ class App:
     def add_webcam(self, label):
         if 'cap' not in self.__dict__:
             self.cap = cv2.VideoCapture(0)
+            try:
+                self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+                self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            except Exception:
+                pass
 
         self._label = label
         self.process_webcam()
@@ -47,12 +96,13 @@ class App:
     def process_webcam(self):
         ret, frame = self.cap.read()
 
-        self.most_recent_capture_arr = frame
-        img_ = cv2.cvtColor(self.most_recent_capture_arr, cv2.COLOR_BGR2RGB)
-        self.most_recent_capture_pil = Image.fromarray(img_)
-        imgtk = ImageTk.PhotoImage(image=self.most_recent_capture_pil)
-        self._label.imgtk = imgtk
-        self._label.configure(image=imgtk)
+        if ret and frame is not None:
+            self.most_recent_capture_arr = frame
+            img_ = cv2.cvtColor(self.most_recent_capture_arr, cv2.COLOR_BGR2RGB)
+            self.most_recent_capture_pil = Image.fromarray(img_)
+            imgtk = ImageTk.PhotoImage(image=self.most_recent_capture_pil)
+            self._label.imgtk = imgtk
+            self._label.configure(image=imgtk)
 
         self._label.after(20, self.process_webcam)
 
@@ -74,7 +124,6 @@ class App:
                 util.msg_box('Welcome back !', 'Welcome, {}.'.format(name))
                 with open(self.log_path, 'a') as f:
                     f.write('{},{},in\n'.format(name, datetime.datetime.now()))
-                    f.close()
 
         else:
             util.msg_box('Hey, you are a spoofer!', 'You are fake !')
@@ -97,32 +146,41 @@ class App:
                 util.msg_box('Logging out', 'Goodbye, {}.'.format(name))
                 with open(self.log_path, 'a') as f:
                     f.write('{},{},out\n'.format(name, datetime.datetime.now()))
-                    f.close()
 
         else:
             util.msg_box('Hey, you are a spoofer!', 'You are fake !')
 
-
     def register_new_user(self):
         self.register_new_user_window = tk.Toplevel(self.main_window)
-        self.register_new_user_window.geometry("1200x520+370+120")
+        util.setup_window(self.register_new_user_window, title="Register New User", size=(900, 500))
 
-        self.accept_button_register_new_user_window = util.get_button(self.register_new_user_window, 'Accept', 'green', self.accept_register_new_user)
-        self.accept_button_register_new_user_window.place(x=750, y=300)
+        left = tk.Frame(self.register_new_user_window, bg=self.page_bg)
+        left.pack(side="left", fill="both", expand=True)
 
-        self.try_again_button_register_new_user_window = util.get_button(self.register_new_user_window, 'Try again', 'red', self.try_again_register_new_user)
-        self.try_again_button_register_new_user_window.place(x=750, y=400)
+        webcam_card = tk.Frame(left, bg=self.webcam_frame_bg, bd=2, relief="flat")
+        webcam_card.pack(expand=True, fill="both", padx=20, pady=20)
 
-        self.capture_label = util.get_img_label(self.register_new_user_window)
-        self.capture_label.place(x=10, y=0, width=700, height=500)
+        self.capture_label = tk.Label(webcam_card, bg=self.webcam_frame_bg)
+        self.capture_label.pack(expand=True, fill="both", padx=12, pady=12)
 
         self.add_img_to_label(self.capture_label)
 
-        self.entry_text_register_new_user = util.get_entry_text(self.register_new_user_window)
-        self.entry_text_register_new_user.place(x=750, y=150)
+        right = tk.Frame(self.register_new_user_window, bg=self.panel_bg, width=300)
+        right.pack(side="right", fill="y")
 
-        self.text_label_register_new_user = util.get_text_label(self.register_new_user_window, 'Please, \ninput username:')
-        self.text_label_register_new_user.place(x=750, y=70)
+        tk.Label(right, text="Enter Username", font=("Segoe UI", 14, "bold"),
+                 bg=self.panel_bg, fg="white").pack(pady=30)
+
+        self.entry_text_register_new_user = util.get_entry_text(right)
+        self.entry_text_register_new_user.pack(pady=10)
+
+        util.get_button(
+            right, 'Accept', self.btn_primary, self.accept_register_new_user
+        ).pack(pady=15, ipadx=8, ipady=6)
+
+        util.get_button(
+            right, 'Cancel', self.btn_secondary, self.try_again_register_new_user
+        ).pack(pady=8, ipadx=8, ipady=6)
 
     def try_again_register_new_user(self):
         self.register_new_user_window.destroy()
@@ -131,7 +189,6 @@ class App:
         imgtk = ImageTk.PhotoImage(image=self.most_recent_capture_pil)
         label.imgtk = imgtk
         label.configure(image=imgtk)
-
         self.register_new_user_capture = self.most_recent_capture_arr.copy()
 
     def start(self):
